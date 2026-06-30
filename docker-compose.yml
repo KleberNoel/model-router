@@ -1,0 +1,22 @@
+services:
+  # The verified deployment on this host runs the router and llama-server
+  # directly on the host, and keeps Open WebUI containerized.
+  open-webui:
+    build:
+      context: ./open-webui-overlay
+      args:
+        OPEN_WEBUI_BASE_IMAGE: ${OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:main}
+    image: ${OPEN_WEBUI_PATCHED_IMAGE:-open-webui-router:local}
+    network_mode: host
+    environment:
+      OPENAI_API_BASE_URL: http://127.0.0.1:4000/v1
+      OPENAI_API_KEY: replace-with-router-service-api-key
+      # Disable the default Ollama probe so model discovery only uses the router.
+      OLLAMA_BASE_URL: http://127.0.0.1:9
+      OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS: ${OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS:-16000}
+    volumes:
+      - open_webui_data:/app/backend/data
+    restart: unless-stopped
+
+volumes:
+  open_webui_data:
