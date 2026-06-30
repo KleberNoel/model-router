@@ -24,7 +24,7 @@ services:
       MODEL_ROUTER_MANAGED_LLAMA_PORT: 8090
       MODEL_ROUTER_MANAGED_LLAMA_IDLE_TIMEOUT_SECONDS: 120
       MODEL_ROUTER_MANAGED_LLAMA_SHUTDOWN_TIMEOUT_SECONDS: 35
-      MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON: '${MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON:-{"gemma-4-26BA4B-SpeechEngCandidateTrainer":{"model_path":"/models/gemma-4-26B-A4B-it-abliterated.IQ4_XS.gguf","cli_args":["-c","65536","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":120},"gemma-4-31B-it-qat-UD-Q4_K_XL.gguf":{"model_path":"/models/gemma-4-31B-it-qat-UD-Q4_K_XL.gguf","cli_args":["-c","192000","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":300}}}'
+      MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON: '${MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON:-{"gemma-4-26B-A4B-fast":{"model_path":"/models/gemma-4-26B-A4B-it-abliterated.IQ4_XS.gguf","cli_args":["-c","65536","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":120},"gemma-4-31B-it-qat-UD-Q4_K_XL.gguf":{"model_path":"/models/gemma-4-31B-it-qat-UD-Q4_K_XL.gguf","cli_args":["-c","192000","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":300}}}'
       # Wrapper + llama-cpp need access to host models
       MODELS_HOST_DIR: ${MODELS_HOST_DIR:-/home/kleber/models}
     volumes:
@@ -95,7 +95,7 @@ services:
       AUDIO_TTS_OPENAI_API_BASE_URL: ${AUDIO_TTS_OPENAI_API_BASE_URL:-http://kokoro-tts:8881/v1}
       AUDIO_TTS_OPENAI_API_KEY: ${AUDIO_TTS_OPENAI_API_KEY:-not-needed}
       AUDIO_TTS_SPLIT_ON: ${AUDIO_TTS_SPLIT_ON:-none}
-      SYSTEM_PROMPT: ${SYSTEM_PROMPT:-"You are an expert and industry veteran in Speech Engineering, LLM training, kernel optimization, Agentic AI, Policy, low resource languages, etc. You are helping a candidate train for their interview."}
+      SYSTEM_PROMPT: ${SYSTEM_PROMPT:-}
       OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS: ${OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS:-16000}
       DATABASE_URL: ${OPENWEBUI_DATABASE_URL:-postgresql+psycopg2://webscraper:webscraper@db:5432/openwebui}
     volumes:
