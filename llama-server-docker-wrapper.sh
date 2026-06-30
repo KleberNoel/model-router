@@ -115,7 +115,10 @@ while True:
 PROXY_PID=$!
 
 cleanup() {
-  docker stop "$CONTAINER_NAME" --timeout 10 2>/dev/null || true
+  # Send SIGTERM, wait up to 30s for graceful model unload, then SIGKILL.
+  # After stop, wait for the container to be fully removed (--rm auto-cleanup).
+  docker stop "$CONTAINER_NAME" --timeout 30 2>/dev/null || true
+  docker wait "$CONTAINER_NAME" 2>/dev/null || true
   kill "$PROXY_PID" 2>/dev/null || true
   wait "$PROXY_PID" 2>/dev/null || true
 }

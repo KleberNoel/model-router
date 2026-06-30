@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     managed_llama_port: int = 8090
     managed_llama_health_path: str = "/health"
     managed_llama_startup_timeout_seconds: int = 180
+    managed_llama_shutdown_timeout_seconds: int = 35
     managed_llama_idle_timeout_seconds: int = 900
     managed_llama_models_json: str | None = None
 

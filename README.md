@@ -52,6 +52,38 @@ app/
 
 ## Quick start
 
+```bash
+# 1. Clone and configure
+cp .env.stack.example .env.stack
+# Edit .env.stack: set MODEL_ROUTER_JWT_SECRET_KEY, generate OPEN_WEBUI_ROUTER_API_KEY
+
+# 2. Drop .gguf models in ~/models/ (or set MODELS_HOST_DIR)
+
+# 3. Launch the stack
+docker compose --env-file .env.stack -f docker-compose.stack.yml up -d
+
+# 4. Open WebUI: http://localhost:3002 (first user to sign up is admin)
+
+# 5. Optional LLM sidecar
+docker compose --env-file .env.stack -f docker-compose.stack.yml --profile llama up -d
+```
+
+**Services (ports):**
+
+| Service | Port | Notes |
+|---------|------|-------|
+| model-router | 4000 | Multi-tenant auth, route management |
+| open-webui | 3002 | Web UI with web search, TTS, STT |
+| searxng | 8088 | Web search backend |
+| kokoro-tts | 8881 (internal) | Kokoro-82M TTS (54 voices) |
+| hermes-agent | 8642 (internal) | Agent with tools, code execution |
+| litestream | — | Continuous DB backup to S3/MinIO |
+| llama-cpp (profile) | 8081 | Direct GGUF inference |
+
+**Managed model switching:** Routes with `upstream_base_url=managed://llama-server` share a single GPU. Requesting a different model stops the current one (30s graceful unload) and starts the new one. Busy model returns 503. Define models via `MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON`.
+
+## Dev quick start
+
 1. Create and activate an environment.
 2. Install dependencies.
 
@@ -67,17 +99,9 @@ pip install -e .
 uvicorn app.main:app --reload --host 0.0.0.0 --port 4000
 ```
 
-5. On first startup, the router can bootstrap:
+5. On first startup, the router bootstraps users, tenants, routes, and API keys via `MODEL_ROUTER_BOOTSTRAP_*` env vars.
 
-- one platform admin user
-- one default tenant
-- one default model route
-
-using the `MODEL_ROUTER_BOOTSTRAP_*` and `MODEL_ROUTER_DEFAULT_*` environment variables.
-
-## Verified local deployment
-
-The working setup on this host is:
+## Verified local deployment (host mode)
 
 - `llama-server` running directly on the host at `http://127.0.0.1:8080`
 - the FastAPI router running directly on the host at `http://127.0.0.1:4000`
@@ -118,20 +142,9 @@ MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON={"qwen-35b":{"model_path":"/models/qwen-3
 
 Notes:
 
-- `llama-server` must be installed and available on `PATH`
+- `llama-server` must be installed and available on `PATH` (or use the Docker wrapper)
 - `cli_args` may not include `-m`, `--model`, `--host`, `--port`, or `--alias`; the router sets those
-- if a different model is requested while the managed server is busy, the router returns `503` instead of killing an in-flight request
-
-Open WebUI should be configured with:
-
-- `OPENAI_API_BASE_URL=http://127.0.0.1:4000/v1`
-- `OPENAI_API_KEY=<tenant API key from the router>`
-- `OLLAMA_BASE_URL=http://127.0.0.1:9`
-
-Why host networking for Open WebUI:
-
-- the bridge-network container on this machine could not reliably reach the host router via `host.docker.internal:4000`
-- `network_mode: host` removed that routing issue and restored model discovery
+- if a different model is requested while the managed server is busy, the router returns `503`
 
 ## Service separation
 

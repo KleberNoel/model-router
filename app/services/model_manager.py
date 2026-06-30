@@ -292,14 +292,17 @@ class LlamaServerManager:
         if process is None:
             return
 
-        await asyncio.to_thread(self._terminate_process, process)
+        shutdown_timeout = self._settings.managed_llama_shutdown_timeout_seconds
+        await asyncio.to_thread(self._terminate_process, process, shutdown_timeout)
+        # Give GPU driver time to release CUDA contexts before next model loads
+        await asyncio.sleep(2)
 
-    def _terminate_process(self, process: subprocess.Popen) -> None:
+    def _terminate_process(self, process: subprocess.Popen, timeout_seconds: int = 60) -> None:
         if process.poll() is not None:
             return
         process.terminate()
         try:
-            process.wait(timeout=10)
+            process.wait(timeout=timeout_seconds)
             return
         except subprocess.TimeoutExpired:
             process.kill()

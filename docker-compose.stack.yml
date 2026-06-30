@@ -23,9 +23,10 @@ services:
       MODEL_ROUTER_MANAGED_LLAMA_COMMAND: /usr/local/bin/llama-server
       MODEL_ROUTER_MANAGED_LLAMA_PORT: 8090
       MODEL_ROUTER_MANAGED_LLAMA_IDLE_TIMEOUT_SECONDS: 120
-      MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON: '${MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON:-{"gemma-4-31B-it-abliterated":{"model_path":"/models/gemma-4-31B-it-abliterated.IQ4_XS.gguf","cli_args":["-c","4096","-b","1024","-ub","256","-t","8"],"idle_timeout_seconds":120},"gemma-4-31B-it-qat":{"model_path":"/models/gemma-4-31B-it-qat-UD-Q4_K_XL.gguf","cli_args":["-c","4096","-b","1024","-ub","256","-t","8"],"idle_timeout_seconds":120}}}'
-      # Wrapper needs access to Docker socket and host models
-      MODELS_HOST_DIR: /home/kleber/models
+      MODEL_ROUTER_MANAGED_LLAMA_SHUTDOWN_TIMEOUT_SECONDS: 35
+      MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON: '${MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON:-{"gemma-4-26BA4B-SpeechEngCandidateTrainer":{"model_path":"/models/gemma-4-26B-A4B-it-abliterated.IQ4_XS.gguf","cli_args":["-c","65536","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":120},"gemma-4-31B-it-qat-UD-Q4_K_XL.gguf":{"model_path":"/models/gemma-4-31B-it-qat-UD-Q4_K_XL.gguf","cli_args":["-c","192000","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":300}}}'
+      # Wrapper + llama-cpp need access to host models
+      MODELS_HOST_DIR: ${MODELS_HOST_DIR:-/home/kleber/models}
     volumes:
       - ${MODEL_ROUTER_DATA_DIR:-./runtime/model-router}:/data
       - /home/kleber/model-router/llama-server-docker-wrapper.sh:/usr/local/bin/llama-server:ro
@@ -56,6 +57,7 @@ services:
       API_SERVER_PORT: 8642
       API_SERVER_KEY: hermes-sk-local-dev
       API_SERVER_MODEL_NAME: ${HERMES_API_MODEL_NAME:-hermes-agent}
+      MODEL_ROUTER_API_KEY: ${OPEN_WEBUI_ROUTER_API_KEY}
     volumes:
       - ${HERMES_HOME:-./runtime/hermes}:/opt/data
     networks:
@@ -93,6 +95,7 @@ services:
       AUDIO_TTS_OPENAI_API_BASE_URL: ${AUDIO_TTS_OPENAI_API_BASE_URL:-http://kokoro-tts:8881/v1}
       AUDIO_TTS_OPENAI_API_KEY: ${AUDIO_TTS_OPENAI_API_KEY:-not-needed}
       AUDIO_TTS_SPLIT_ON: ${AUDIO_TTS_SPLIT_ON:-none}
+      SYSTEM_PROMPT: ${SYSTEM_PROMPT:-"You are an expert and industry veteran in Speech Engineering, LLM training, kernel optimization, Agentic AI, Policy, low resource languages, etc. You are helping a candidate train for their interview."}
       OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS: ${OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS:-16000}
       DATABASE_URL: ${OPENWEBUI_DATABASE_URL:-postgresql+psycopg2://webscraper:webscraper@db:5432/openwebui}
     volumes:
@@ -140,9 +143,9 @@ services:
     ports:
       - "${LLAMA_PORT:-8081}:8080"
     environment:
-      LLAMA_HF_REPO: ${LLAMA_HF_REPO:-unsloth/gemma-4-31B-it-qat-GGUF:UD-Q4_K_XL}
-      LLAMA_SPEC_TYPE: ${LLAMA_SPEC_TYPE:-none}
-      LLAMA_CTX_SIZE: ${LLAMA_CTX_SIZE:-8192}
+      LLAMA_MODEL: ${LLAMA_MODEL:-gemma-4-26B-A4B-it-abliterated}
+      LLAMA_MODEL_FILE: ${LLAMA_MODEL_FILE:-/models/gemma-4-26B-A4B-it-abliterated.IQ4_XS.gguf}
+      LLAMA_CTX_SIZE: ${LLAMA_CTX_SIZE:-65536}
       LLAMA_CACHE_TYPE_K: ${LLAMA_CACHE_TYPE_K:-turbo4}
       LLAMA_CACHE_TYPE_V: ${LLAMA_CACHE_TYPE_V:-turbo3}
       LLAMA_BATCH_SIZE: ${LLAMA_BATCH_SIZE:-2048}
@@ -153,13 +156,13 @@ services:
       XDG_CACHE_HOME: /data/.cache
     volumes:
       - ${LLAMA_CACHE_DIR:-./runtime/llama-cpp}:/data
+      - ${MODELS_HOST_DIR:-/home/kleber/models}:/models:ro
     command:
       - >-
         set -euo pipefail;
         args=(
           /app/llama-server
-          -hf "$${LLAMA_HF_REPO}"
-          --spec-type "$${LLAMA_SPEC_TYPE}"
+          -m "$${LLAMA_MODEL_FILE}"
           -ngl all
           -ncmoe "$${LLAMA_N_CPU_MOE}"
           --no-mmap
