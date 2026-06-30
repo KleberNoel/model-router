@@ -142,7 +142,7 @@ MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON={"qwen-35b":{"model_path":"/models/qwen-3
 
 Notes:
 
-- `llama-server` must be installed and available on `PATH` (or use the Docker wrapper)
+- `llama-server` is handled by the Docker wrapper — no local install needed
 - `cli_args` may not include `-m`, `--model`, `--host`, `--port`, or `--alias`; the router sets those
 - if a different model is requested while the managed server is busy, the router returns `503`
 
