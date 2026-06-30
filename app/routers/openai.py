@@ -42,6 +42,13 @@ async def _proxy_request(
     started_at = started_timer()
     lease = await get_llama_server_manager().acquire(route)
     payload["model"] = route.upstream_model_name
+
+    if route.system_prompt:
+        messages = payload.get("messages", [])
+        if not messages or messages[0].get("role") != "system":
+            messages.insert(0, {"role": "system", "content": route.system_prompt})
+        payload["messages"] = messages
+
     is_stream = bool(payload.get("stream"))
 
     if is_stream:

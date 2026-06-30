@@ -86,6 +86,7 @@ def _bootstrap_routes(db) -> None:
                 upstream_headers_json=upstream_headers,
                 allowed_tenant_ids=_tenant_ids_from_item(db, item),
                 max_context_tokens=item.get("max_context_tokens"),
+                system_prompt=item.get("system_prompt"),
                 is_active=bool(item.get("is_active", True)),
             )
         )

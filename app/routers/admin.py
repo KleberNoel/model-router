@@ -123,6 +123,7 @@ def create_model_route(
         upstream_headers_json=payload.upstream_headers,
         allowed_tenant_ids=payload.allowed_tenant_ids,
         max_context_tokens=payload.max_context_tokens,
+        system_prompt=payload.system_prompt,
         is_active=payload.is_active,
     )
     db.add(route)

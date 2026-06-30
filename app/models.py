@@ -104,6 +104,7 @@ class ModelRoute(Base):
     upstream_headers_json: Mapped[dict] = mapped_column("upstream_headers", JSON, default=dict, nullable=False)
     allowed_tenant_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     max_context_tokens: Mapped[int | None] = mapped_column()
+    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

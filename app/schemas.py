@@ -89,6 +89,7 @@ class CreateModelRouteRequest(BaseModel):
     upstream_headers: dict = Field(default_factory=dict)
     allowed_tenant_ids: list[str] = Field(default_factory=list)
     max_context_tokens: int | None = None
+    system_prompt: str | None = None
     is_active: bool = True
 
 
@@ -103,6 +104,7 @@ class ModelRouteResponse(BaseModel):
     upstream_headers_json: dict
     allowed_tenant_ids: list[str]
     max_context_tokens: int | None
+    system_prompt: str | None
     is_active: bool
     created_at: datetime
     updated_at: datetime
