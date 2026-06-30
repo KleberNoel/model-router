@@ -5,7 +5,7 @@ dbs:
         bucket: openwebui-backups
         path: webui
         endpoint: http://minio:9000
-        access-key-id: minio
-        secret-access-key: miniosecret
+        access-key-id: ${LITESTREAM_S3_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_S3_SECRET_ACCESS_KEY}
         force-path-style: true
         skip-verify: true

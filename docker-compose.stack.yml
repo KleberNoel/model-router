@@ -185,7 +185,10 @@ services:
     depends_on:
       open-webui:
         condition: service_started
-    command: replicate
+    command: replicate -config /etc/litestream.yml
+    environment:
+      LITESTREAM_S3_ACCESS_KEY_ID: ${LITESTREAM_S3_ACCESS_KEY_ID:-minio}
+      LITESTREAM_S3_SECRET_ACCESS_KEY: ${LITESTREAM_S3_SECRET_ACCESS_KEY:-miniosecret}
     volumes:
       - ./litestream.yml:/etc/litestream.yml:ro
       - ${OPEN_WEBUI_DATA_DIR:-./runtime/open-webui}:/data
