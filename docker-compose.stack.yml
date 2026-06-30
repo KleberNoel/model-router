@@ -74,17 +74,61 @@ services:
     ports:
       - "${OPEN_WEBUI_PORT:-3000}:8080"
     environment:
-      SCRAPER_API_URL: http://webscraper-agent-api-1:8000
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-opswbsecret2026changeme}
+      ENABLE_WEB_SEARCH: ${ENABLE_WEB_SEARCH:-true}
+      WEB_SEARCH_ENGINE: ${WEB_SEARCH_ENGINE:-searxng}
+      SEARXNG_QUERY_URL: ${SEARXNG_QUERY_URL:-http://searxng:8080}
       OPENAI_API_BASE_URL: http://model-router:4000/v1
-      OPENAI_API_KEY: mrk_0312d870_Z4L3ftsrd5yGOoOFZR82X7fMYPOKZ1EDumcm0nHgjdw
+      OPENAI_API_KEY: ${OPEN_WEBUI_ROUTER_API_KEY}
       OLLAMA_BASE_URL: http://127.0.0.1:9
+      BYPASS_WEB_SEARCH_WEB_LOADER: ${BYPASS_WEB_SEARCH_WEB_LOADER:-true}
+      BYPASS_RETRIEVAL_ACCESS_CONTROL: ${BYPASS_RETRIEVAL_ACCESS_CONTROL:-true}
+      RAG_TOP_K: ${RAG_TOP_K:-5}
+      RAG_RELEVANCE_THRESHOLD: ${RAG_RELEVANCE_THRESHOLD:-0.0}
+      WHISPER_MODEL: ${WHISPER_MODEL:-large-v3-turbo}
+      WHISPER_MULTILINGUAL: ${WHISPER_MULTILINGUAL:-true}
+      AUDIO_TTS_ENGINE: ${AUDIO_TTS_ENGINE:-openai}
+      AUDIO_TTS_MODEL: ${AUDIO_TTS_MODEL:-kokoro}
+      AUDIO_TTS_VOICE: ${AUDIO_TTS_VOICE:-af_heart}
+      AUDIO_TTS_OPENAI_API_BASE_URL: ${AUDIO_TTS_OPENAI_API_BASE_URL:-http://kokoro-tts:8881/v1}
+      AUDIO_TTS_OPENAI_API_KEY: ${AUDIO_TTS_OPENAI_API_KEY:-not-needed}
+      AUDIO_TTS_SPLIT_ON: ${AUDIO_TTS_SPLIT_ON:-none}
       OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS: ${OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS:-16000}
-      DATABASE_URL: postgresql+psycopg2://webscraper:webscraper@db:5432/openwebui
+      DATABASE_URL: ${OPENWEBUI_DATABASE_URL:-postgresql+psycopg2://webscraper:webscraper@db:5432/openwebui}
     volumes:
       - ${OPEN_WEBUI_DATA_DIR:-./runtime/open-webui}:/app/backend/data
     networks:
       - ai-stack
       - webscraper-agent_default
+
+  kokoro-tts:
+    build:
+      context: ./kokoro-tts
+    restart: unless-stopped
+    environment:
+      HF_HOME: /data/hf
+    volumes:
+      - kokoro_data:/data
+    networks:
+      - ai-stack
+
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_PORT:-8088}:8080"
+    environment:
+      SEARXNG_BASE_URL: ${SEARXNG_BASE_URL:-}
+    volumes:
+      - ./searxng-conf:/etc/searxng:ro
+    networks:
+      - ai-stack
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
 
   llama-cpp:
     image: ${LLAMA_CPP_IMAGE:-vito974/llama-cpp-turboquant:server-cuda12}
@@ -134,8 +178,28 @@ services:
     networks:
       - ai-stack
 
+  litestream:
+    image: litestream/litestream:latest
+    user: "0:0"
+    restart: unless-stopped
+    depends_on:
+      open-webui:
+        condition: service_started
+    command: replicate
+    volumes:
+      - ./litestream.yml:/etc/litestream.yml:ro
+      - ${OPEN_WEBUI_DATA_DIR:-./runtime/open-webui}:/data
+    networks:
+      - ai-stack
+      - langfuse_default
+
+volumes:
+  kokoro_data:
+
 networks:
   ai-stack:
     driver: bridge
   webscraper-agent_default:
+    external: true
+  langfuse_default:
     external: true
