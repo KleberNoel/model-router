@@ -95,6 +95,7 @@ services:
       AUDIO_TTS_OPENAI_API_BASE_URL: ${AUDIO_TTS_OPENAI_API_BASE_URL:-http://kokoro-tts:8881/v1}
       AUDIO_TTS_OPENAI_API_KEY: ${AUDIO_TTS_OPENAI_API_KEY:-not-needed}
       AUDIO_TTS_SPLIT_ON: ${AUDIO_TTS_SPLIT_ON:-none}
+      TERMINAL_SERVER_CONNECTIONS: ${TERMINAL_SERVER_CONNECTIONS:-[{"id":"local","name":"Local Shell","url":"http://ttyd:7681","enabled":true}]}
       SYSTEM_PROMPT: ${SYSTEM_PROMPT:-}
       OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS: ${OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS:-16000}
       DATABASE_URL: ${OPENWEBUI_DATABASE_URL:-postgresql+psycopg2://webscraper:webscraper@db:5432/openwebui}
@@ -112,6 +113,13 @@ services:
       HF_HOME: /data/hf
     volumes:
       - kokoro_data:/data
+    networks:
+      - ai-stack
+
+  ttyd:
+    image: tsl0922/ttyd:latest
+    restart: unless-stopped
+    command: ttyd --port 7681 --writable bash
     networks:
       - ai-stack
 
