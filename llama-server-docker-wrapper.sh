@@ -62,7 +62,7 @@ start_container >/dev/null 2>&1
 
 echo "[wrapper] Waiting for $ALIAS to become ready..." >&2
 
-for i in $(seq 1 180); do
+for i in $(seq 1 300); do
   CIP=$(get_container_ip)
   if [ -n "$CIP" ]; then
     if python3 -c "import urllib.request, sys; urllib.request.urlopen('http://${CIP}:8080/v1/models', timeout=3); sys.exit(0)" 2>/dev/null; then
