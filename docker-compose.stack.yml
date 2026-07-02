@@ -73,6 +73,8 @@ services:
     depends_on:
       model-router:
         condition: service_healthy
+      db:
+        condition: service_healthy
     ports:
       - "${OPEN_WEBUI_PORT:-3000}:8080"
     environment:
@@ -98,7 +100,9 @@ services:
       TERMINAL_SERVER_CONNECTIONS: ${TERMINAL_SERVER_CONNECTIONS:-[{"id":"local","name":"Local Shell","url":"http://ttyd:7681","enabled":true}]}
       SYSTEM_PROMPT: ${SYSTEM_PROMPT:-}
       OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS: ${OPENWEBUI_INLINE_FULL_CONTEXT_MAX_CHARS:-16000}
-      DATABASE_URL: ${OPENWEBUI_DATABASE_URL:-postgresql+psycopg2://webscraper:webscraper@db:5432/openwebui}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://openwebui:openwebui@db:5432/openwebui}
+      VECTOR_DB: ${VECTOR_DB:-pgvector}
+      PGVECTOR_DB_URL: ${PGVECTOR_DB_URL:-postgresql+psycopg2://openwebui:openwebui@db:5432/openwebui}
     volumes:
       - ${OPEN_WEBUI_DATA_DIR:-./runtime/open-webui}:/app/backend/data
     networks:
@@ -122,6 +126,22 @@ services:
     command: ttyd --port 7681 --writable bash
     networks:
       - ai-stack
+
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-openwebui}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openwebui}
+      POSTGRES_DB: ${POSTGRES_DB:-openwebui}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - ai-stack
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-openwebui}"]
+      interval: 10s
+      retries: 5
 
   searxng:
     image: searxng/searxng:latest
@@ -209,6 +229,7 @@ services:
 
 volumes:
   kokoro_data:
+  pgdata:
 
 networks:
   ai-stack:
