@@ -209,6 +209,25 @@ services:
     networks:
       - ai-stack
 
+  startup-checks:
+    build:
+      context: .
+    entrypoint: ["python3", "/app/scripts/startup_checks.py"]
+    environment:
+      MODEL_ROUTER_API_KEY: ${OPEN_WEBUI_ROUTER_API_KEY}
+      PG_DSN: ${PG_DSN:-postgresql://openwebui:openwebui@db:5432/openwebui}
+    depends_on:
+      model-router:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ${MODEL_ROUTER_DATA_DIR:-./runtime/model-router}:/data
+    networks:
+      - ai-stack
+    restart: "no"
+
   litestream:
     image: litestream/litestream:latest
     user: "0:0"
