@@ -50,6 +50,21 @@ Take a database backup and stop writes before migration. The script does not
 truncate the target and should not be run repeatedly against a populated
 database.
 
+The current local SQLite database contains historical usage rows referencing
+routes that were later deleted. The migration preserves those usage rows and
+sets only the nullable `usage_logs.model_route_id` to `NULL`, reporting the
+adjustment. The source database remains unchanged.
+
+The candidate local Postgres migration was validated with:
+
+```text
+Alembic revision: 0002_gmail_triage
+Tables/data: 8 routes, 1 tenant, 1 user, 4 API keys, 915 usage rows, 2 profiles
+Historical adjustments: 419 stale nullable usage route references cleared
+Router health: /healthz and /readyz passed
+Model discovery: 6 routes returned
+```
+
 ## Local Goose
 
 Create a `goose-coding` profile through the harness API or Streamlit, then:

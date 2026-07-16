@@ -2,10 +2,24 @@ import json
 import importlib.util
 from pathlib import Path
 
+from sqlalchemy import create_engine, select
+
+from app.database import Base
+from app.models import UsageLog
+
 
 def _module():
     path = Path(__file__).parents[1] / "scripts" / "setup_services.py"
     spec = importlib.util.spec_from_file_location("setup_services_test_module", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _migration_module():
+    path = Path(__file__).parents[1] / "scripts" / "migrate_sqlite_to_postgres.py"
+    spec = importlib.util.spec_from_file_location("migration_test_module", path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
@@ -43,3 +57,15 @@ def test_placeholder_values_are_not_treated_as_credentials():
     assert module.is_placeholder("replace-with-generated-key")
     assert module.is_placeholder("mrk_replace_with_key")
     assert not module.is_placeholder("mrk_12345678_real-value")
+
+
+def test_migration_nulls_missing_nullable_foreign_keys():
+    module = _migration_module()
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with engine.connect() as connection:
+        row = {"model_route_id": "deleted-route"}
+        normalized, adjustments = module.normalize_foreign_keys(row, UsageLog.__table__, connection)
+
+    assert normalized["model_route_id"] is None
+    assert adjustments == ["usage_logs.model_route_id"]
