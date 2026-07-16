@@ -1,0 +1,70 @@
+services:
+  model-router:
+    environment:
+      MODEL_ROUTER_DATABASE_URL: ${MODEL_ROUTER_DATABASE_URL:-postgresql+psycopg://openwebui:openwebui@db:5432/model_router}
+      MODEL_ROUTER_DATABASE_AUTO_CREATE: ${MODEL_ROUTER_DATABASE_AUTO_CREATE:-false}
+      MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_ID: ${MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_ID:-}
+      MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_SECRET: ${MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_SECRET:-}
+      MODEL_ROUTER_GOOGLE_OAUTH_REDIRECT_URI: ${MODEL_ROUTER_GOOGLE_OAUTH_REDIRECT_URI:-http://127.0.0.1:4000/api/v1/integrations/google/callback}
+      MODEL_ROUTER_GOOGLE_OAUTH_ENCRYPTION_KEY: ${MODEL_ROUTER_GOOGLE_OAUTH_ENCRYPTION_KEY:-}
+      MODEL_ROUTER_OTEL_ENABLED: ${MODEL_ROUTER_OTEL_ENABLED:-false}
+      MODEL_ROUTER_OTEL_SERVICE_NAME: ${MODEL_ROUTER_OTEL_SERVICE_NAME:-model-router}
+      MODEL_ROUTER_OTEL_EXPORTER_OTLP_ENDPOINT: ${MODEL_ROUTER_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON: '${MODEL_ROUTER_MANAGED_LLAMA_MODELS_JSON:-{"Hui-gemma-26B-A4B-abb-IQ4_XS.gguf":{"model_path":"/models/gemma-4-26B-A4B-it-abliterated.IQ4_XS.gguf","cli_args":["-c","65536","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":120},"gemma-4-31B-it-qat-UD-Q4_K_XL.gguf":{"model_path":"/models/gemma-4-31B-it-qat-UD-Q4_K_XL.gguf","cli_args":["-c","192000","-b","2048","-ub","512","-t","8","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":300},"functiongemma-270m-it-Q4_K_M.gguf":{"model_path":"/models/functiongemma-270m-it-Q4_K_M.gguf","cli_args":["-c","32768","-b","1024","-ub","256","-t","4","-fa","1"],"idle_timeout_seconds":600},"local/qwen-reasoning":{"model_path":"/models/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled.Q4_K_M.gguf","cli_args":["-ngl","all","-c","262144","-np","1","-b","512","-ub","128","-t","12","-fa","1","--cache-type-k","turbo4","--cache-type-v","turbo3"],"idle_timeout_seconds":900}}}'
+
+  db:
+    volumes:
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+
+  google-tasks-worker:
+    build:
+      context: .
+    profiles:
+      - integrations
+    command: python -m app.workers.google_tasks_worker
+    environment:
+      MODEL_ROUTER_DATABASE_URL: ${MODEL_ROUTER_DATABASE_URL:-postgresql+psycopg://openwebui:openwebui@db:5432/model_router}
+      MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_ID: ${MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_ID:-}
+      MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_SECRET: ${MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_SECRET:-}
+      MODEL_ROUTER_GOOGLE_OAUTH_ENCRYPTION_KEY: ${MODEL_ROUTER_GOOGLE_OAUTH_ENCRYPTION_KEY:-}
+      MODEL_ROUTER_GOOGLE_TASKS_SYNC_INTERVAL_SECONDS: ${MODEL_ROUTER_GOOGLE_TASKS_SYNC_INTERVAL_SECONDS:-300}
+    depends_on:
+      model-router:
+        condition: service_healthy
+    networks:
+      - ai-stack
+
+  agent-console:
+    build:
+      context: .
+      dockerfile: console/Dockerfile
+    profiles:
+      - console
+    restart: unless-stopped
+    environment:
+      MODEL_ROUTER_URL: http://model-router:4000
+      MODEL_ROUTER_API_KEY: ${AGENT_CONSOLE_API_KEY:-}
+    depends_on:
+      model-router:
+        condition: service_healthy
+    ports:
+      - "${AGENT_CONSOLE_PORT:-8501}:8501"
+    networks:
+      - ai-stack
+
+  agent-runner:
+    build:
+      context: .
+    profiles:
+      - agents
+    command: python -m app.workers.agent_runs
+    environment:
+      MODEL_ROUTER_DATABASE_URL: ${MODEL_ROUTER_DATABASE_URL:-postgresql+psycopg://openwebui:openwebui@db:5432/model_router}
+      MODEL_ROUTER_RUNNER_API_KEY: ${MODEL_ROUTER_RUNNER_API_KEY:-}
+      MODEL_ROUTER_URL: http://model-router:4000
+      MODEL_ROUTER_RUNNER_INTERVAL_SECONDS: ${MODEL_ROUTER_RUNNER_INTERVAL_SECONDS:-2}
+    depends_on:
+      model-router:
+        condition: service_healthy
+    networks:
+      - ai-stack

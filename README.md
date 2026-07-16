@@ -22,6 +22,8 @@ The router can also manage a local `llama-server` process itself for routes conf
 - tenant-scoped API keys for OpenCode, Hermes, and other machine clients
 - OpenAI-compatible proxy surface for `GET /v1/models`, `POST /v1/chat/completions`, and `POST /v1/completions`
 - usage logging only, not enforcement, for limits in the first phase
+- agent profiles and queued runs for Goose, Hermes, and direct model workers
+- persistent tenant-scoped memory, TODOs, and Google Tasks synchronization primitives
 
 ## Best-practice client split
 
@@ -185,26 +187,31 @@ OpenAI-compatible:
 
 ## Current limitations
 
-- no Alembic migrations yet, tables are created with SQLAlchemy metadata
+- Alembic baseline and SQLite-to-Postgres migration tooling are included; production should disable metadata auto-creation
 - no hard quota enforcement yet, usage is only logged
 - no Redis-backed revocation or rate limiting yet
 - no Open WebUI-specific SSO flow yet; Open WebUI should use a service API key in phase 1
 - `docker-compose.yml` is intentionally limited to the verified Open WebUI container path; the router and inference server are currently host-run services in the tested setup
 - managed `llama-server` mode currently runs a single model process at a time
+- local Qwen3.6 Q4_K_M reasoning route supports 262,144 native context with turboquant KV cache
 
 ## Full stack compose
 
-For a containerized stack that keeps `model-router` as the required front door, use:
+For a containerized stack that keeps `model-router` as the required front door, use the base stack plus the platform overlay:
 
 - `docker-compose.stack.yml` for `model-router` + Hermes + Open WebUI
+- `docker-compose.platform.yml` for Postgres cutover, Qwen managed route, harness workers, and Streamlit console
 - the optional `llama-cpp` sidecar via `--profile llama`
 
 Example:
 
 ```bash
 cp .env.stack.example .env.stack
-docker compose --env-file .env.stack -f docker-compose.stack.yml up -d
-docker compose --env-file .env.stack -f docker-compose.stack.yml --profile llama up -d
+docker compose --env-file .env.stack \
+  -f docker-compose.stack.yml -f docker-compose.platform.yml up -d
+docker compose --env-file .env.stack \
+  -f docker-compose.stack.yml -f docker-compose.platform.yml \
+  --profile console --profile agents up -d
 ```
 
 The stack uses two bootstrap env vars on first start:

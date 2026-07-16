@@ -1,0 +1,77 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "model-router/local/qwen-reasoning",
+  "provider": {
+    "model-router": {
+      "name": "Local Model Router",
+      "api": "openai",
+      "options": {
+        "baseURL": "http://127.0.0.1:4000/v1",
+        "apiKey": "{env:MODEL_ROUTER_API_KEY}"
+      },
+      "models": {
+        "local/qwen-reasoning": {
+          "id": "local/qwen-reasoning",
+          "name": "Qwen3.6 35B A3B Reasoning Q4",
+          "family": "qwen3.6",
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "interleaved": {"field": "reasoning_content"},
+          "cost": {"input": 0, "output": 0},
+          "limit": {"context": 262144, "output": 8192},
+          "options": {},
+          "modalities": {"input": ["text"], "output": ["text"]}
+        },
+        "gemma-4-31B-it-qat-UD-Q4_K_XL.gguf": {
+          "id": "gemma-4-31B-it-qat-UD-Q4_K_XL.gguf",
+          "name": "Gemma 4 31B",
+          "family": "gemma-4",
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {"input": 0, "output": 0},
+          "limit": {"context": 192000, "output": 8192},
+          "options": {},
+          "modalities": {"input": ["text"], "output": ["text"]}
+        },
+        "functiongemma-270m-it-Q4_K_M.gguf": {
+          "id": "functiongemma-270m-it-Q4_K_M.gguf",
+          "name": "FunctionGemma 270M",
+          "family": "gemma",
+          "reasoning": false,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {"input": 0, "output": 0},
+          "limit": {"context": 32768, "output": 2048},
+          "options": {},
+          "modalities": {"input": ["text"], "output": ["text"]}
+        },
+        "hermes-agent": {
+          "id": "hermes-agent",
+          "name": "Hermes Agent",
+          "family": "hermes",
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {"input": 0, "output": 0},
+          "limit": {"context": 32768, "output": 8192},
+          "options": {},
+          "modalities": {"input": ["text"], "output": ["text"]}
+        },
+        "deepseek-flash": {
+          "id": "deepseek-flash",
+          "name": "DeepSeek Flash",
+          "family": "deepseek",
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {"input": 0, "output": 0},
+          "limit": {"context": 128000, "output": 8192},
+          "options": {},
+          "modalities": {"input": ["text"], "output": ["text"]}
+        }
+      }
+    }
+  }
+}

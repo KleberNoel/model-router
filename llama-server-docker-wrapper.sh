@@ -8,6 +8,7 @@ MODEL_PATH=""
 ALIAS=""
 PORT="8090"
 EXTRA_ARGS=()
+GPU_LAYERS="all"
 CONTAINER_IMAGE="${LLAMA_SERVER_IMAGE:-vito974/llama-cpp-turboquant:server-cuda12}"
 MODELS_HOST_DIR="${MODELS_HOST_DIR:-/home/kleber/models}"
 DOCKER_NETWORK="${DOCKER_NETWORK:-model-router_ai-stack}"
@@ -18,6 +19,8 @@ while [ $# -gt 0 ]; do
     -m=*|--model=*) MODEL_PATH="${1#*=}"; shift ;;
     --alias) ALIAS="$2"; shift 2 ;;
     --alias=*) ALIAS="${1#*=}"; shift ;;
+    -ngl|--n-gpu-layers) GPU_LAYERS="$2"; shift 2 ;;
+    -ngl=*|--n-gpu-layers=*) GPU_LAYERS="${1#*=}"; shift ;;
     --host) shift 2 ;;
     --port) PORT="$2"; shift 2 ;;
     --port=*) PORT="${1#*=}"; shift ;;
@@ -50,7 +53,7 @@ start_container() {
     --entrypoint /bin/bash \
     -v "$HOST_MODEL:$INTERNAL_MODEL:ro" \
     "$CONTAINER_IMAGE" \
-    -lc "exec /app/llama-server -m $INTERNAL_MODEL --host 0.0.0.0 --port 8080 --alias ${ALIAS} -ngl all --no-mmap --mlock ${EXTRA_ARGS[*]}"
+    -lc "exec /app/llama-server -m $INTERNAL_MODEL --host 0.0.0.0 --port 8080 --alias ${ALIAS} -ngl ${GPU_LAYERS} --no-mmap --mlock ${EXTRA_ARGS[*]}"
 }
 
 get_container_ip() {

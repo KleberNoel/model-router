@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.deps import AuthContext, require_platform_admin
-from app.models import ApiKey, ModelRoute, Tenant, TenantMembership, User
+from app.models import ApiKey, ModelRoute, Tenant, TenantMembership, UsageLog, User
 from app.schemas import (
     CreateApiKeyRequest,
     CreateApiKeyResponse,
@@ -14,11 +14,47 @@ from app.schemas import (
     CreateUserRequest,
     GrantMembershipRequest,
     ModelRouteResponse,
+    UpdateModelRouteRequest,
 )
 from app.security import hash_password, hash_secret, new_api_key
 from app.services.audit import log_audit
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/usage")
+def usage_summary(
+    db: Session = Depends(get_db),
+    _: AuthContext = Depends(require_platform_admin),
+    tenant_id: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    statement = select(
+        UsageLog.tenant_id,
+        UsageLog.model_route_id,
+        UsageLog.status_code,
+        func.count(UsageLog.id).label("requests"),
+        func.coalesce(func.sum(UsageLog.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(UsageLog.completion_tokens), 0).label("completion_tokens"),
+        func.coalesce(func.sum(UsageLog.total_tokens), 0).label("total_tokens"),
+        func.avg(UsageLog.latency_ms).label("average_latency_ms"),
+    ).group_by(UsageLog.tenant_id, UsageLog.model_route_id, UsageLog.status_code)
+    if tenant_id:
+        statement = statement.where(UsageLog.tenant_id == tenant_id)
+    rows = db.execute(statement.limit(max(1, min(limit, 1000)))).all()
+    return [
+        {
+            "tenant_id": row.tenant_id,
+            "model_route_id": row.model_route_id,
+            "status_code": row.status_code,
+            "requests": row.requests,
+            "prompt_tokens": row.prompt_tokens,
+            "completion_tokens": row.completion_tokens,
+            "total_tokens": row.total_tokens,
+            "average_latency_ms": float(row.average_latency_ms or 0),
+        }
+        for row in rows
+    ]
 
 
 @router.post("/tenants")
@@ -124,6 +160,7 @@ def create_model_route(
         allowed_tenant_ids=payload.allowed_tenant_ids,
         max_context_tokens=payload.max_context_tokens,
         system_prompt=payload.system_prompt,
+        capabilities_json=payload.capabilities,
         is_active=payload.is_active,
     )
     db.add(route)
@@ -139,6 +176,38 @@ def list_model_routes(
     _: AuthContext = Depends(require_platform_admin),
 ) -> list[ModelRoute]:
     return list(db.scalars(select(ModelRoute).order_by(ModelRoute.name.asc())).all())
+
+
+@router.patch("/model-routes/{route_id}", response_model=ModelRouteResponse)
+def update_model_route(
+    route_id: str,
+    payload: UpdateModelRouteRequest,
+    db: Session = Depends(get_db),
+    admin: AuthContext = Depends(require_platform_admin),
+) -> ModelRoute:
+    route = db.get(ModelRoute, route_id)
+    if route is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model route not found")
+
+    fields = {
+        "description": payload.description,
+        "upstream_base_url": payload.upstream_base_url,
+        "upstream_model_name": payload.upstream_model_name,
+        "upstream_headers_json": payload.upstream_headers,
+        "allowed_tenant_ids": payload.allowed_tenant_ids,
+        "max_context_tokens": payload.max_context_tokens,
+        "system_prompt": payload.system_prompt,
+        "capabilities_json": payload.capabilities,
+        "is_active": payload.is_active,
+    }
+    for name, value in fields.items():
+        if value is not None:
+            setattr(route, name, value)
+    db.add(route)
+    db.commit()
+    db.refresh(route)
+    log_audit(db, actor=admin, action="model_route.update", resource_type="model_route", resource_id=route.id)
+    return route
 
 
 @router.post("/api-keys", response_model=CreateApiKeyResponse)

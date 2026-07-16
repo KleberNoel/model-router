@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     app_name: str = "Model Router"
     env: str = "development"
     database_url: str = "sqlite:///./model_router.db"
+    database_pool_size: int = 10
+    database_max_overflow: int = 20
+    database_pool_timeout_seconds: int = 30
+    database_auto_create: bool = True
     redis_url: str = "redis://127.0.0.1:6379/0"
 
     jwt_secret_key: str = "change-me"
@@ -46,6 +50,27 @@ class Settings(BaseSettings):
     default_upstream_model_name: str | None = None
     bootstrap_routes_json: str | None = None
     bootstrap_api_keys_json: str | None = None
+
+    google_oauth_client_id: str | None = None
+    google_oauth_client_secret: str | None = None
+    google_oauth_redirect_uri: str = "http://127.0.0.1:4000/api/v1/integrations/google/callback"
+    google_oauth_encryption_key: str | None = None
+    google_oauth_scopes: list[str] = Field(
+        default_factory=lambda: [
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/tasks",
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/drive.file",
+        ]
+    )
+    google_default_task_list: str = "@default"
+
+    otel_enabled: bool = False
+    otel_service_name: str = "model-router"
+    otel_exporter_otlp_endpoint: str | None = None
+    google_tasks_sync_interval_seconds: int = 300
 
 
 @lru_cache(maxsize=1)

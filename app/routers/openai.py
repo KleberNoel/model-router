@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.deps import AuthContext, get_auth_context
+from app.deps import AuthContext, require_scope
 from app.services.audit import elapsed_ms, log_usage, started_timer
 from app.services.model_manager import get_llama_server_manager
 from app.services.proxy import (
@@ -20,7 +20,7 @@ router = APIRouter(tags=["openai"])
 
 
 @router.get("/v1/models")
-def models(context: AuthContext = Depends(get_auth_context), db: Session = Depends(get_db)) -> dict:
+def models(context: AuthContext = Depends(require_scope("models:read")), db: Session = Depends(get_db)) -> dict:
     routes = list_accessible_models(db, context.tenant.id)
     return openai_model_list(routes)
 
@@ -145,7 +145,7 @@ async def _proxy_request(
 @router.post("/v1/chat/completions")
 async def chat_completions(
     request: Request,
-    context: AuthContext = Depends(get_auth_context),
+    context: AuthContext = Depends(require_scope("chat:completions")),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Response:
@@ -161,7 +161,7 @@ async def chat_completions(
 @router.post("/v1/completions")
 async def completions(
     request: Request,
-    context: AuthContext = Depends(get_auth_context),
+    context: AuthContext = Depends(require_scope("chat:completions")),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Response:

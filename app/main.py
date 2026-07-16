@@ -7,10 +7,11 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.database import SessionLocal, init_db
 from app.models import ApiKey, ModelRoute, Tenant, TenantMembership, User
-from app.routers import auth, health, openai
+from app.routers import auth, health, harness, openai
 from app.routers import admin as admin_router
 from app.security import api_key_prefix, hash_password, hash_secret
 from app.services.model_manager import shutdown_llama_server_manager
+from app.telemetry import configure_telemetry
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
@@ -27,6 +28,8 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(admin_router.router)
 app.include_router(openai.router)
+app.include_router(harness.router)
+configure_telemetry(app, settings)
 
 
 def _parse_bootstrap_items(raw: str | None, *, env_name: str) -> list[dict]:
@@ -86,7 +89,8 @@ def _bootstrap_routes(db) -> None:
                 upstream_headers_json=upstream_headers,
                 allowed_tenant_ids=_tenant_ids_from_item(db, item),
                 max_context_tokens=item.get("max_context_tokens"),
-                system_prompt=item.get("system_prompt"),
+                        system_prompt=item.get("system_prompt"),
+                        capabilities_json=item.get("capabilities") if isinstance(item.get("capabilities"), dict) else {},
                 is_active=bool(item.get("is_active", True)),
             )
         )
@@ -202,7 +206,8 @@ def bootstrap_defaults() -> None:
 
 @app.on_event("startup")
 def on_startup() -> None:
-    init_db()
+    if settings.database_auto_create:
+        init_db()
     bootstrap_defaults()
 
 

@@ -114,6 +114,21 @@ class LlamaServerManager:
             self._cancel_idle_shutdown_locked()
             await self._stop_current_process_locked()
 
+    def status(self) -> dict[str, object]:
+        process_alive = self._process is not None and self._process.poll() is None
+        if not process_alive:
+            state = "idle"
+        elif self._active_requests:
+            state = "busy"
+        else:
+            state = "serving"
+        return {
+            "state": state,
+            "route_name": self._current_route_name,
+            "active_requests": self._active_requests,
+            "process_alive": process_alive,
+        }
+
     def _get_lock(self) -> asyncio.Lock:
         if self._lock is None:
             self._lock = asyncio.Lock()

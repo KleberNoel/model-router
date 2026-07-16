@@ -104,3 +104,15 @@ def require_platform_admin(context: AuthContext = Depends(get_auth_context)) -> 
     if context.user is None or not context.user.is_platform_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform admin required")
     return context
+
+
+def require_scope(*required_scopes: str):
+    def dependency(context: AuthContext = Depends(get_auth_context)) -> AuthContext:
+        if not set(required_scopes).issubset(context.scopes):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"message": "Insufficient scope", "required": list(required_scopes)},
+            )
+        return context
+
+    return dependency

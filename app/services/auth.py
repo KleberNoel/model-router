@@ -14,7 +14,17 @@ from app.security import (
     verify_password,
 )
 
-DEFAULT_SCOPES = ["chat:completions", "models:read"]
+DEFAULT_SCOPES = [
+    "chat:completions",
+    "models:read",
+    "agent:read",
+    "agent:write",
+    "memory:read",
+    "memory:write",
+    "todos:read",
+    "todos:write",
+    "integrations:google",
+]
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User | None:

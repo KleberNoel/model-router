@@ -65,6 +65,7 @@ def openai_model_list(routes: list[ModelRoute]) -> dict:
                 "object": "model",
                 "owned_by": "model-router",
                 "context_window": route.max_context_tokens,
+                "capabilities": route.capabilities_json,
             }
             for route in routes
         ],

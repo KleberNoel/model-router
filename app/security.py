@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
@@ -28,7 +28,7 @@ def create_access_token(
     role: str,
     scopes: list[str],
 ) -> tuple[str, int]:
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     expires = now + timedelta(minutes=settings.access_token_ttl_minutes)
     payload = {
         "sub": subject,

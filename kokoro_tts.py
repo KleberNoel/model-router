@@ -15,6 +15,14 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 
 SAMPLE_RATE = 24000
 KOKORO_VOICES: list[str] = []
+OPENAI_VOICE_ALIASES = {
+    "alloy": "af_heart",
+    "echo": "am_michael",
+    "fable": "bf_emma",
+    "onyx": "am_adam",
+    "nova": "af_bella",
+    "shimmer": "bf_isabella",
+}
 
 
 def _discover_voices() -> list[str]:
@@ -37,6 +45,17 @@ def _discover_voices() -> list[str]:
 
 
 _pipeline = None
+
+
+def resolve_voice(voice: str) -> str:
+    resolved = OPENAI_VOICE_ALIASES.get(voice, voice)
+    if resolved not in KOKORO_VOICES:
+        raise HTTPException(status_code=400, detail=f"Unknown voice: {voice}. Available: {KOKORO_VOICES}")
+    return resolved
+
+
+def openai_voice_payload() -> dict:
+    return {"voices": [{"id": voice, "name": voice} for voice in KOKORO_VOICES]}
 
 
 def _get_pipeline():
@@ -83,17 +102,24 @@ def list_voices():
     return {"voices": KOKORO_VOICES}
 
 
+@app.get("/v1/audio/voices")
+def list_openai_voices():
+    return openai_voice_payload()
+
+
 @app.post("/v1/audio/speech")
 def speech(req: SpeechRequest):
-    if req.voice not in KOKORO_VOICES:
-        raise HTTPException(status_code=400, detail=f"Unknown voice: {req.voice}. Available: {KOKORO_VOICES}")
+    voice = resolve_voice(req.voice)
+    response_format = req.response_format.lower()
+    if response_format not in {"wav", "flac", "ogg", "mp3"}:
+        raise HTTPException(status_code=400, detail="response_format must be wav, flac, ogg, or mp3")
 
     pipeline = _get_pipeline()
     chunks = []
     t0 = time.monotonic()
 
     try:
-        for result in pipeline(req.input, voice=req.voice, speed=req.speed):
+        for result in pipeline(req.input, voice=voice, speed=req.speed):
             chunks.append(result.audio.numpy())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -104,7 +130,7 @@ def speech(req: SpeechRequest):
     import numpy as np
     audio = np.concatenate(chunks)
     buf = io.BytesIO()
-    sf.write(buf, audio, SAMPLE_RATE, format=req.response_format.upper())
+    sf.write(buf, audio, SAMPLE_RATE, format=response_format.upper())
     buf.seek(0)
 
     elapsed = time.monotonic() - t0
@@ -112,7 +138,7 @@ def speech(req: SpeechRequest):
 
     return Response(
         content=buf.getvalue(),
-        media_type=f"audio/{req.response_format}",
+        media_type=f"audio/{response_format}",
         headers={
             "X-Request-Id": str(uuid.uuid4()),
             "X-Audio-Duration": f"{len(audio)/SAMPLE_RATE:.2f}",

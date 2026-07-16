@@ -38,6 +38,19 @@ def _route(name: str, upstream_model_name: str | None = None) -> ModelRoute:
 
 
 class LlamaServerManagerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_status_reports_idle_manager(self):
+        manager = LlamaServerManager(Settings())
+
+        self.assertEqual(
+            manager.status(),
+            {
+                "state": "idle",
+                "route_name": None,
+                "active_requests": 0,
+                "process_alive": False,
+            },
+        )
+
     async def test_acquire_reuses_loaded_model(self):
         settings = Settings(
             managed_llama_models_json='{"alpha":{"model_path":"/models/alpha.gguf"}}'
@@ -57,6 +70,8 @@ class LlamaServerManagerTests(unittest.IsolatedAsyncioTestCase):
         await second.release()
         await first.release()
         await manager.shutdown()
+
+        self.assertEqual(manager.status()["state"], "idle")
 
     async def test_switches_models_when_idle(self):
         settings = Settings(
