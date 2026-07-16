@@ -294,3 +294,31 @@ class OAuthState(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class GmailTriage(Base):
+    __tablename__ = "gmail_triage"
+    __table_args__ = (UniqueConstraint("tenant_id", "user_id", "gmail_message_id", name="uq_gmail_triage_message"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(String(36), ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    gmail_message_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    gmail_thread_id: Mapped[str | None] = mapped_column(String(255))
+    subject: Mapped[str | None] = mapped_column(String(1000))
+    sender: Mapped[str | None] = mapped_column(String(500))
+    is_important: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    context_matches: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    context_memory_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="inspected", nullable=False, index=True)
+    importance_reason: Mapped[str | None] = mapped_column(Text)
+    draft_body: Mapped[str | None] = mapped_column(Text)
+    gmail_draft_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )

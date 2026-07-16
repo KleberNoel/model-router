@@ -64,7 +64,7 @@ def _connection(db: Session, *, tenant_id: str, user_id: str) -> GoogleConnectio
     return connection
 
 
-def _access_token(db: Session, connection: GoogleConnection, settings: Settings) -> str:
+def get_access_token(db: Session, connection: GoogleConnection, settings: Settings) -> str:
     credentials = decrypt_credentials(settings, connection.credentials_encrypted)
     expires_at = credentials.get("expires_at", 0)
     if expires_at and expires_at > datetime.now(timezone.utc).timestamp() + 60:
@@ -90,6 +90,11 @@ def _access_token(db: Session, connection: GoogleConnection, settings: Settings)
     db.add(connection)
     db.commit()
     return str(credentials["access_token"])
+
+
+def _access_token(db: Session, connection: GoogleConnection, settings: Settings) -> str:
+    """Backward-compatible internal alias for the Tasks synchronizer."""
+    return get_access_token(db, connection, settings)
 
 
 def sync_google_tasks(

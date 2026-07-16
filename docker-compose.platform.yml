@@ -34,6 +34,28 @@ services:
     networks:
       - ai-stack
 
+  gmail-triage-worker:
+    build:
+      context: .
+    profiles:
+      - integrations
+    command: python -m app.workers.gmail_triage_worker
+    environment:
+      MODEL_ROUTER_DATABASE_URL: ${MODEL_ROUTER_DATABASE_URL:-postgresql+psycopg://openwebui:openwebui@db:5432/model_router}
+      MODEL_ROUTER_AGENT_RUNNER_URL: http://model-router:4000
+      MODEL_ROUTER_AGENT_RUNNER_API_KEY: ${MODEL_ROUTER_AGENT_RUNNER_API_KEY:-}
+      MODEL_ROUTER_GMAIL_TRIAGE_ENABLED: ${MODEL_ROUTER_GMAIL_TRIAGE_ENABLED:-false}
+      MODEL_ROUTER_GMAIL_TRIAGE_INTERVAL_SECONDS: ${MODEL_ROUTER_GMAIL_TRIAGE_INTERVAL_SECONDS:-900}
+      MODEL_ROUTER_GMAIL_TRIAGE_MODEL_ROUTE: ${MODEL_ROUTER_GMAIL_TRIAGE_MODEL_ROUTE:-local/qwen-reasoning}
+      MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_ID: ${MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_ID:-}
+      MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_SECRET: ${MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_SECRET:-}
+      MODEL_ROUTER_GOOGLE_OAUTH_ENCRYPTION_KEY: ${MODEL_ROUTER_GOOGLE_OAUTH_ENCRYPTION_KEY:-}
+    depends_on:
+      model-router:
+        condition: service_healthy
+    networks:
+      - ai-stack
+
   agent-console:
     build:
       context: .

@@ -61,16 +61,22 @@ class Settings(BaseSettings):
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/userinfo.profile",
             "https://www.googleapis.com/auth/tasks",
-            "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/drive.file",
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.compose",
         ]
     )
     google_default_task_list: str = "@default"
+    gmail_triage_enabled: bool = False
+    gmail_triage_interval_seconds: int = 900
+    gmail_triage_query: str = "is:unread is:important newer_than:7d"
 
     otel_enabled: bool = False
     otel_service_name: str = "model-router"
     otel_exporter_otlp_endpoint: str | None = None
     google_tasks_sync_interval_seconds: int = 300
+    agent_runner_url: str = "http://127.0.0.1:4000"
+    agent_runner_api_key: str | None = None
+    gmail_triage_model_route: str = "local/qwen-reasoning"
 
 
 @lru_cache(maxsize=1)

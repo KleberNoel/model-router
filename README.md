@@ -24,6 +24,7 @@ The router can also manage a local `llama-server` process itself for routes conf
 - usage logging only, not enforcement, for limits in the first phase
 - agent profiles and queued runs for Goose, Hermes, and direct model workers
 - persistent tenant-scoped memory, TODOs, and Google Tasks synchronization primitives
+- draft-only Gmail triage based on important messages and approved memory context
 
 ## Best-practice client split
 
@@ -246,19 +247,48 @@ A small translation service that exposes Hermes tools to Open WebUI is best desc
 
 Point OpenCode at the model-router as an OpenAI-compatible provider.
 
+### Setup
+
+OpenCode must inherit a scoped router API key when it starts. The checked-in
+configuration uses environment interpolation and never stores the key:
+
+```bash
+# If the key is stored in your login profile:
+source ~/.bash_profile
+
+# Confirm only that a value exists; do not print the key.
+test -n "${MODEL_ROUTER_API_KEY:-}" && echo "router key is set" || echo "router key is missing"
+
+# Start OpenCode from this same shell.
+opencode /home/kleber/model-router
+```
+
+For a new shell, set the value through your secret manager or a local file with
+permissions `0600`:
+
+```bash
+export MODEL_ROUTER_API_KEY='<scoped-tenant-api-key>'
+opencode /home/kleber/model-router
+```
+
+If OpenCode reports `Unauthorized: Missing credentials`, it was launched
+before the variable was exported, or from a different terminal/session. Do not
+put the raw key in `opencode.json`, this repository, shell history, or a shared
+Tailscale setup.
+
 ### Config (`~/.config/opencode/opencode.json`)
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "model-router/gemma-4-31B-it-qat-UD-Q4_K_XL.gguf",
+  "model": "model-router/local/qwen-reasoning",
   "provider": {
     "model-router": {
       "name": "Local Model Router",
       "api": "openai",
       "options": {
         "baseURL": "http://127.0.0.1:4000/v1",
-        "apiKey": "<your-tenant-api-key>"
+        "apiKey": "{env:MODEL_ROUTER_API_KEY}"
       },
       "models": {
         "gemma-4-31B-it-qat-UD-Q4_K_XL.gguf": {
@@ -284,6 +314,49 @@ Point OpenCode at the model-router as an OpenAI-compatible provider.
 
 The `cost` is zero because this is a local model. OpenCode displays token usage
 and context fill percentage using values returned by the router.
+
+## OpenCode Shell Credential
+
+The config uses `"apiKey": "{env:MODEL_ROUTER_API_KEY}"`; it intentionally does
+not contain a real credential. Start OpenCode from a shell that has a scoped
+router key:
+
+```bash
+source ~/.bash_profile  # or export MODEL_ROUTER_API_KEY from your secret manager
+test -n "${MODEL_ROUTER_API_KEY:-}" && echo "router key is set"
+opencode /home/kleber/model-router
+```
+
+`Unauthorized: Missing credentials` means OpenCode was started before the
+variable was exported or from a different shell/session.
+
+## Gmail Draft Triage
+
+The optional Gmail worker reads only messages matching:
+
+```text
+is:unread is:important newer_than:7d
+```
+
+It creates a draft only when matching project/user memory exists. It never
+sends, deletes, archives, or labels mail. The generated body is marked
+`DRAFT ONLY - NOT SENT`.
+
+Required Google OAuth scopes are limited to:
+
+- `gmail.readonly`
+- `gmail.compose` (required by Google to create drafts; application code never calls send)
+- `tasks`
+
+Enable it only after verifying the manual endpoint:
+
+```bash
+POST /api/v1/integrations/google/gmail/triage
+```
+
+Then set `MODEL_ROUTER_GMAIL_TRIAGE_ENABLED=true` and run the
+`gmail-triage-worker` integration profile. Keep Gmail triage disabled by
+default until the OAuth connection and model runner key are configured.
 
 ### What displays in OpenCode
 

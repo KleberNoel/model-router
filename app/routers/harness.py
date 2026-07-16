@@ -17,9 +17,11 @@ from app.schemas import (
     TodoRequest,
     TodoResponse,
     TodoUpdateRequest,
+    GmailTriageResponse,
 )
 from app.services.google_sync import sync_google_tasks
 from app.services.google_oauth import finish_google_oauth, start_google_oauth
+from app.services.gmail_triage import triage_user
 from app.services.harness import claim_run, complete_todo, create_memory, create_profile, create_run, create_todo, finish_run, search_memories, update_todo
 from app.config import Settings, get_settings
 
@@ -311,3 +313,14 @@ def sync_tasks(
     if context.user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google Tasks sync requires a user session")
     return sync_google_tasks(db, tenant_id=context.tenant.id, user_id=context.user.id, settings=settings)
+
+
+@router.post("/integrations/google/gmail/triage", response_model=GmailTriageResponse)
+def triage_gmail(
+    context: AuthContext = Depends(require_scope("integrations:google")),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, int]:
+    if context.user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gmail triage requires a user session")
+    return triage_user(db, tenant_id=context.tenant.id, user_id=context.user.id, settings=settings)

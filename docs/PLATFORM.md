@@ -86,6 +86,37 @@ Tasks sync is stable:
 - Drive adapter: file ID, MIME type, parent folder, revision, and permission
   metadata; file contents should remain in Drive, not in the memory table.
 
+## Gmail Draft Triage
+
+The optional Gmail worker is deliberately constrained:
+
+```text
+Gmail important/unread mail
+  -> read message
+  -> search tenant/user memory
+  -> draft only if context matches
+  -> model-router reasoning route
+  -> Gmail draft creation
+```
+
+It does not expose or call Gmail send, delete, archive, or label operations.
+`gmail.compose` is required by Google for draft creation, so the OAuth token
+has more capability than the application uses; keep the implementation
+draft-only and require human review in Gmail.
+
+Enable after OAuth setup:
+
+```text
+MODEL_ROUTER_GMAIL_TRIAGE_ENABLED=true
+MODEL_ROUTER_GMAIL_TRIAGE_INTERVAL_SECONDS=900
+MODEL_ROUTER_GMAIL_TRIAGE_MODEL_ROUTE=local/qwen-reasoning
+```
+
+Use `POST /api/v1/integrations/google/gmail/triage` for a manual dry run before
+starting the `gmail-triage-worker` profile. Gmail body text is untrusted input
+and is explicitly separated from approved memory context in the drafting
+prompt.
+
 ## Scale Boundary
 
 The current local GPU manager is single-process and exclusive. Multiple GPU

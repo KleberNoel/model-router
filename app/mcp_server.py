@@ -18,6 +18,14 @@ def _client() -> httpx.Client:
     )
 
 
+def _user_client() -> httpx.Client:
+    return httpx.Client(
+        base_url=os.getenv("MODEL_ROUTER_URL", "http://127.0.0.1:4000").rstrip("/"),
+        headers={"Authorization": f"Bearer {os.environ['MODEL_ROUTER_USER_TOKEN']}"},
+        timeout=180,
+    )
+
+
 def main() -> None:
     from mcp.server.fastmcp import FastMCP
 
@@ -64,6 +72,14 @@ def main() -> None:
         """Complete a canonical TODO."""
         with _client() as client:
             response = client.post(f"/api/v1/todos/{todo_id}/complete")
+            response.raise_for_status()
+            return response.json()
+
+    @mcp.tool()
+    def gmail_triage_draft_only() -> dict:
+        """Inspect important Gmail and create drafts only; never send, delete, archive, or label mail."""
+        with _user_client() as client:
+            response = client.post("/api/v1/integrations/google/gmail/triage")
             response.raise_for_status()
             return response.json()
 

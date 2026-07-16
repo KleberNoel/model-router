@@ -235,3 +235,10 @@ class TodoResponse(BaseModel):
     external_id: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class GmailTriageResponse(BaseModel):
+    inspected: int
+    drafted: int
+    skipped: int
+    failed: int
