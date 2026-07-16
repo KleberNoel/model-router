@@ -71,6 +71,62 @@ docker compose --env-file .env.stack -f docker-compose.stack.yml up -d
 docker compose --env-file .env.stack -f docker-compose.stack.yml --profile llama up -d
 ```
 
+## Service Setup
+
+Use the setup script to configure ignored runtime credentials without putting
+them in git. It writes `.env.stack` with mode `0600` and does not print secret
+values:
+
+```bash
+# Interactive local setup; keeps the current router on SQLite.
+python scripts/setup_services.py --database sqlite
+
+# Configure a local Compose PostgreSQL database instead.
+python scripts/setup_services.py --database local-postgres --start
+
+# Configure a managed PostgreSQL URL from the environment.
+MODEL_ROUTER_DATABASE_URL='postgresql+psycopg://...' \
+python scripts/setup_services.py --database postgres --non-interactive
+```
+
+Optional environment inputs are supported for automation:
+
+```bash
+DEEPSEEK_API_KEY='...' \
+MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_ID='...' \
+MODEL_ROUTER_GOOGLE_OAUTH_CLIENT_SECRET='...' \
+python scripts/setup_services.py --database sqlite
+```
+
+The script creates safe bootstrap routes for Hermes, FunctionGemma (32K),
+Gemma, and Qwen. It adds DeepSeek only when `DEEPSEEK_API_KEY` is supplied.
+Google OAuth credentials are stored only in the ignored `.env.stack` file.
+
+For a real PostgreSQL cutover, provision the database first, stop writes, then
+run migrations and data migration explicitly:
+
+```bash
+python scripts/setup_services.py --database postgres --migrate
+MODEL_ROUTER_SOURCE_DATABASE_URL='sqlite:////data/model_router.db' \
+MODEL_ROUTER_DATABASE_URL='postgresql+psycopg://...' \
+python scripts/migrate_sqlite_to_postgres.py
+```
+
+`--migrate` does not run automatically for SQLite and does not delete source
+data. Back up before the cutover and verify row counts afterward.
+
+The setup script also writes a protected `runtime/opencode.env` file containing
+the generated OpenCode router key. Start OpenCode with:
+
+```bash
+set -a
+. runtime/opencode.env
+set +a
+opencode /home/kleber/model-router
+```
+
+This avoids storing the credential in `opencode.json`, git, or shell history.
+
 **Services (ports):**
 
 | Service | Port | Notes |

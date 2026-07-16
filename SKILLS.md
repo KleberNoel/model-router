@@ -62,6 +62,10 @@ curl -fsS http://127.0.0.1:4000/status
 ## Deployment
 
 - Use `docs/PLATFORM.md` for the Postgres cutover, Google OAuth, worker, and scale plan.
+- Use `python scripts/setup_services.py --help` as the supported credential/database setup entry point.
+- The setup script writes only ignored `.env.stack` with mode `0600`; it must not print or commit secret values.
+- Use `--database sqlite` for the current local deployment, `--database local-postgres` for Compose PostgreSQL, and `--database postgres` for a managed URL.
+- Require an explicit backup and migration step before changing an existing SQLite deployment to PostgreSQL.
 - Keep production secrets in a deployment secret manager or protected environment.
 - Use scoped service API keys for OpenCode, Open WebUI, the runner, and the console.
 - Rotate keys that have appeared in shell files or chat history during the next approved maintenance window.
